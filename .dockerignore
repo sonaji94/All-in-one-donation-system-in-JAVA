@@ -1,0 +1,10 @@
+.git
+.gitignore
+.idea
+*.iml
+target/
+.mvn/
+*.log
+docker-compose*.yml
+test-checkout.html
+README.md
