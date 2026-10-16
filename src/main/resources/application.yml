@@ -1,0 +1,62 @@
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+
+spring:
+  application:
+    name: all-in-one-donation-system
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/donation_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: DonationHikariCP
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 600000          # 10 minutes (prevents Neon cold-start disconnects)
+      max-lifetime: 1800000          # 30 minutes
+      connection-timeout: 30000      # 30 seconds
+      keepalive-time: 30000          # 30 seconds keepalive heartbeat for serverless Neon
+      leak-detection-threshold: 20000
+      validation-timeout: 5000
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+# Application Security and Payment Gateway Credentials
+app:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    expiration-ms: 86400000 # 24 hours in milliseconds
+  cors:
+    frontend-url: ${FRONTEND_URL:http://localhost:3000,http://localhost:5173,http://127.0.0.1:5500}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_YourTestKeyIdHere}
+    key-secret: ${RAZORPAY_KEY_SECRET:YourTestKeySecretHere}
+    currency: INR
+
+logging:
+  level:
+    root: INFO
+    com.donation.platform: DEBUG
+    org.hibernate.SQL: WARN
