@@ -1,0 +1,96 @@
+name: CI/CD Production Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build, Test & Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21 (Eclipse Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Verify Environment & Tools
+        run: |
+          java -version
+          mvn -version
+
+      - name: Compile & Run Tests
+        run: mvn clean test -B
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
+          SPRING_DATASOURCE_USERNAME: test
+          SPRING_DATASOURCE_PASSWORD: test
+          JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+          RAZORPAY_KEY_ID: rzp_test_mockKeyId
+          RAZORPAY_KEY_SECRET: mockKeySecret
+
+      - name: Build Application Artifact (JAR)
+        run: mvn package -DskipTests -B
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Container Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: donation-platform:${{ github.sha }},donation-platform:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-to-cloud:
+    name: Trigger Cloud Deployment (Render / Railway)
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Render via Deploy Hook
+        if: "${{ env.RENDER_HOOK != '' }}"
+        env:
+          RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          echo "Triggering Render Production Deployment Hook..."
+          HTTP_RESPONSE=$(curl -s -o response.txt -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          echo "Render response code: $HTTP_RESPONSE"
+          cat response.txt
+          if [ "$HTTP_RESPONSE" -ge 200 ] && [ "$HTTP_RESPONSE" -lt 300 ]; then
+            echo "Successfully signaled Render deploy hook."
+          else
+            echo "Failed to signal Render hook (HTTP $HTTP_RESPONSE)"
+            exit 1
+          fi
+
+      - name: Deploy to Railway via Deploy Hook
+        if: "${{ env.RAILWAY_HOOK != '' }}"
+        env:
+          RAILWAY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK_URL }}
+        run: |
+          echo "Triggering Railway Production Deployment Hook..."
+          HTTP_RESPONSE=$(curl -s -o railway_response.txt -w "%{http_code}" -X POST "${{ secrets.RAILWAY_DEPLOY_HOOK_URL }}")
+          echo "Railway response code: $HTTP_RESPONSE"
+          cat railway_response.txt
+          if [ "$HTTP_RESPONSE" -ge 200 ] && [ "$HTTP_RESPONSE" -lt 300 ]; then
+            echo "Successfully signaled Railway deploy hook."
+          else
+            echo "Failed to signal Railway hook (HTTP $HTTP_RESPONSE)"
+            exit 1
+          fi

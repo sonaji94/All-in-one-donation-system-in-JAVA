@@ -55,6 +55,15 @@ app:
     key-secret: ${RAZORPAY_KEY_SECRET:YourTestKeySecretHere}
     currency: INR
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
 logging:
   level:
     root: INFO
