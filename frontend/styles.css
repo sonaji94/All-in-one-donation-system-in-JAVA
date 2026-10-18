@@ -1,0 +1,105 @@
+/* ==============================================================================
+   ALL-IN-ONE DONATION PLATFORM - CUSTOM DESIGN SYSTEM & ANIMATIONS
+   Theme: Emerald & Deep Slate Modern Enterprise
+   ============================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --primary: #059669;
+    --primary-hover: #047857;
+    --primary-light: #ecfdf5;
+    --slate-dark: #0f172a;
+    --slate-surface: #1e293b;
+    --border-subtle: #e2e8f0;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc;
+    color: #1e293b;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism Navigation & Surfaces */
+.glass-nav {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Modal Backdrop Blur */
+.modal-backdrop {
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+/* Smooth Progress Bar Transitions */
+.progress-bar-fill {
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+/* Glow effects */
+.glow-emerald {
+    box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3);
+}
+
+/* Subtle Card Hover */
+.campaign-card {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.campaign-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+}
+
+/* Preset Amount Chips */
+.preset-chip {
+    transition: all 0.2s ease;
+}
+
+.preset-chip.active {
+    background-color: #059669;
+    color: #ffffff;
+    border-color: #059669;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Badge Pulse Animation */
+@keyframes pulse-subtle {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.03); }
+}
+
+.pulse-badge {
+    animation: pulse-subtle 3s infinite ease-in-out;
+}

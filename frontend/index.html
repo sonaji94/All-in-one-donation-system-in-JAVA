@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImpactFund - All-in-One Donation & Crowdfunding Platform</title>
+    
+    <!-- Meta SEO & Social Sharing -->
+    <meta name="description" content="Transparent, secure crowdfunding platform powered by Java 21, Spring Boot 3, and Razorpay cryptographic verification.">
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            900: '#064e3b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Razorpay Standard Checkout SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
+
+    <!-- Connection Status Banner -->
+    <div id="connectionBanner" class="bg-emerald-600 text-white text-xs py-1 px-4 text-center font-medium flex items-center justify-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+        <span id="connectionStatusText">Connecting to Backend API...</span>
+        <button onclick="toggleApiSettingsModal()" class="underline ml-2 hover:text-emerald-100">Configure API</button>
+    </div>
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-40 glass-nav">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition">
+                    <i class="fa-solid fa-hand-holding-heart text-xl"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-black tracking-tight text-slate-900">Impact<span class="text-emerald-600">Fund</span></span>
+                    <span class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 -mt-1">Verified Giving</span>
+                </div>
+            </a>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+                <a href="#campaignsSection" class="hover:text-emerald-600 transition">Explore Causes</a>
+                <a href="#impactStatsSection" class="hover:text-emerald-600 transition">Live Impact</a>
+                <a href="#howItWorksSection" class="hover:text-emerald-600 transition">How It Works</a>
+            </nav>
+
+            <!-- User Auth & CTA -->
+            <div class="flex items-center gap-3">
+                <button onclick="openCreateCampaignModal()" class="hidden sm:inline-flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2.5 rounded-xl font-bold text-sm transition">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Start a Campaign</span>
+                </button>
+
+                <!-- Unauthenticated State -->
+                <div id="unauthNav" class="flex items-center gap-2">
+                    <button onclick="openAuthModal('login')" class="text-slate-700 hover:text-slate-900 font-bold text-sm px-3 py-2">
+                        Sign In
+                    </button>
+                    <button onclick="openAuthModal('register')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-md shadow-emerald-600/20 transition">
+                        Register
+                    </button>
+                </div>
+
+                <!-- Authenticated State -->
+                <div id="authNav" class="hidden items-center gap-3">
+                    <div class="relative">
+                        <button onclick="toggleUserDropdown()" class="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-100 transition focus:outline-none">
+                            <div class="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow" id="navUserAvatar">
+                                U
+                            </div>
+                            <span class="hidden lg:block text-sm font-bold text-slate-800" id="navUserName">User</span>
+                            <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                        </button>
+
+                        <!-- User Dropdown Menu -->
+                        <div id="userDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                            <div class="px-4 py-2.5 border-b border-slate-100">
+                                <p class="text-xs text-slate-400">Signed in as</p>
+                                <p class="text-sm font-bold text-slate-900 truncate" id="dropdownUserEmail">user@example.com</p>
+                                <span class="inline-block text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full mt-1" id="dropdownUserRole">ROLE_USER</span>
+                            </div>
+                            <button onclick="openCreateCampaignModal(); toggleUserDropdown()" class="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium">
+                                <i class="fa-solid fa-bullhorn text-slate-400 w-4"></i>
+                                <span>Create Campaign</span>
+                            </button>
+                            <button onclick="logoutUser()" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 font-medium border-t border-slate-100 mt-1">
+                                <i class="fa-solid fa-arrow-right-from-bracket text-red-400 w-4"></i>
+                                <span>Sign Out</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow">
+        
+        <!-- Hero Section -->
+        <section class="relative overflow-hidden pt-12 pb-20 bg-gradient-to-b from-white to-slate-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto">
+                    <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-6 pulse-badge">
+                        <i class="fa-solid fa-shield-halved"></i> 100% Cryptographically Verified Giving
+                    </span>
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.15]">
+                        Empower Causes That <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">Transform Lives</span>
+                    </h1>
+                    <p class="mt-6 text-lg text-slate-600 leading-relaxed font-normal">
+                        Support verified grassroots fundraisers with zero middlemen. Every donation is captured securely via Razorpay and protected against double-spending with database concurrency locks.
+                    </p>
+                    <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+                        <a href="#campaignsSection" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-4 rounded-2xl shadow-xl shadow-emerald-600/25 transition duration-200 transform hover:-translate-y-0.5 flex items-center gap-2">
+                            <span>Explore Active Causes</span>
+                            <i class="fa-solid fa-arrow-down text-sm"></i>
+                        </a>
+                        <button onclick="openCreateCampaignModal()" class="bg-white hover:bg-slate-50 text-slate-800 font-bold px-8 py-4 rounded-2xl border border-slate-200 shadow-sm transition duration-200 flex items-center gap-2">
+                            <i class="fa-solid fa-sparkles text-amber-500"></i>
+                            <span>Start a Fundraiser</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Impact Stats Strip -->
+                <div id="impactStatsSection" class="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                    <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm text-center">
+                        <p class="text-3xl font-black text-slate-900" id="statTotalRaised">₹0</p>
+                        <p class="text-xs uppercase font-bold tracking-wider text-slate-400 mt-1">Total Impact Raised</p>
+                    </div>
+                    <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm text-center">
+                        <p class="text-3xl font-black text-emerald-600" id="statActiveCampaigns">0</p>
+                        <p class="text-xs uppercase font-bold tracking-wider text-slate-400 mt-1">Verified Causes</p>
+                    </div>
+                    <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm text-center">
+                        <p class="text-3xl font-black text-slate-900" id="statSupporters">1,420+</p>
+                        <p class="text-xs uppercase font-bold tracking-wider text-slate-400 mt-1">Global Donors</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Campaigns Explorer Section -->
+        <section id="campaignsSection" class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">Community Fundraisers</span>
+                    <h2 class="text-3xl font-black text-slate-900 mt-2">Active Campaigns</h2>
+                    <p class="text-sm text-slate-500 mt-1">Real-time funding progress backed by optimistic concurrency controls.</p>
+                </div>
+
+                <!-- Category Filters & Search -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="relative">
+                        <input type="text" id="campaignSearchInput" oninput="filterCampaigns()" placeholder="Search campaigns..." class="pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none w-56 sm:w-64 bg-white shadow-sm">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-slate-400 text-xs"></i>
+                    </div>
+                    <select id="campaignSortSelect" onchange="sortCampaigns()" class="py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-semibold bg-white text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm">
+                        <option value="newest">Newest First</option>
+                        <option value="fundingHigh">Most Funded (%)</option>
+                        <option value="targetHigh">Highest Goal (₹)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Campaign Cards Grid Container -->
+            <div id="campaignsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Dynamic campaign cards injected by app.js -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyCampaignsState" class="hidden text-center py-20 bg-white rounded-3xl border border-slate-200/80">
+                <div class="w-16 h-16 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-2xl mb-4">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">No campaigns found</h3>
+                <p class="text-sm text-slate-500 mt-1">Be the first to initiate a cause or change your filter keywords.</p>
+                <button onclick="openCreateCampaignModal()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition">
+                    Start a Fundraiser Now
+                </button>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="howItWorksSection" class="py-16 bg-slate-100/60 border-t border-slate-200/60">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-2xl mx-auto mb-12">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-600">Enterprise Reliability</span>
+                    <h2 class="text-3xl font-black text-slate-900 mt-1">Transparent Giving Process</h2>
+                    <p class="text-sm text-slate-500 mt-2">Every transaction follows an immutable cryptographic verification lifecycle.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-lg mb-6">1</div>
+                        <h3 class="text-lg font-bold text-slate-900">Initiate Order</h3>
+                        <p class="text-sm text-slate-600 mt-2 leading-relaxed">Donors select an amount. The Spring Boot backend registers an INITIATED donation record and creates a signed Razorpay Order.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative">
+                        <div class="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center font-black text-lg mb-6">2</div>
+                        <h3 class="text-lg font-bold text-slate-900">Razorpay Checkout</h3>
+                        <p class="text-sm text-slate-600 mt-2 leading-relaxed">Payment is fulfilled via UPI, Cards, NetBanking, or Wallets inside Razorpay's PCI-DSS compliant checkout window.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg mb-6">3</div>
+                        <h3 class="text-lg font-bold text-slate-900">HMAC-SHA256 Verification</h3>
+                        <p class="text-sm text-slate-600 mt-2 leading-relaxed">Our backend cryptographically verifies the webhook signature and atomically updates campaign funding with optimistic locking.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-black text-sm">
+                    <i class="fa-solid fa-hand-holding-heart"></i>
+                </div>
+                <span class="text-white font-black text-lg">ImpactFund</span>
+                <span class="text-xs text-slate-500">© 2026 Production Platform. Built with Spring Boot 3 & Razorpay.</span>
+            </div>
+            <div class="flex items-center gap-6 text-xs font-semibold">
+                <a href="#" onclick="openApiSettingsModal(); return false;" class="hover:text-emerald-400 transition">API Settings</a>
+                <a href="https://github.com/sonaji94/All-in-one-donation-system-in-JAVA" target="_blank" class="hover:text-emerald-400 transition flex items-center gap-1.5">
+                    <i class="fa-brands fa-github text-sm"></i>
+                    <span>GitHub Repository</span>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ========================================================================= -->
+    <!-- MODALS SECTION                                                            -->
+    <!-- ========================================================================= -->
+
+    <!-- 1. DONATION CHECKOUT MODAL -->
+    <div id="donationModal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 transform transition-all animate-in zoom-in-95">
+            <div class="p-6 bg-gradient-to-br from-emerald-600 to-teal-700 text-white relative">
+                <button onclick="closeDonationModal()" class="absolute top-5 right-5 text-white/80 hover:text-white text-xl focus:outline-none">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <span class="text-[10px] uppercase font-bold tracking-widest bg-white/20 px-2.5 py-0.5 rounded-full">Secure Checkout</span>
+                <h3 class="text-xl font-black mt-2" id="checkoutCampaignTitle">Donate to Campaign</h3>
+                <p class="text-xs text-emerald-100 mt-1 line-clamp-1" id="checkoutCampaignDesc">Supporting cause...</p>
+            </div>
+
+            <form id="donationForm" onsubmit="handleProceedDonation(event)" class="p-6 space-y-5">
+                <input type="hidden" id="checkoutCampaignId">
+
+                <!-- Preset Chips -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Select Donation Amount</label>
+                    <div class="grid grid-cols-4 gap-2 mb-3">
+                        <button type="button" onclick="setDonationAmount(500)" class="preset-chip active py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700">₹500</button>
+                        <button type="button" onclick="setDonationAmount(1000)" class="preset-chip py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700">₹1,000</button>
+                        <button type="button" onclick="setDonationAmount(2500)" class="preset-chip py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700">₹2,500</button>
+                        <button type="button" onclick="setDonationAmount(5000)" class="preset-chip py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700">₹5,000</button>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-2.5 text-slate-400 font-bold">₹</span>
+                        <input type="number" id="donationAmountInput" min="1" step="1" value="500" class="w-full pl-8 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                </div>
+
+                <!-- Donor Details -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Donor Name</label>
+                        <input type="text" id="donorNameInput" placeholder="Your Full Name" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Email Address (for receipt)</label>
+                        <input type="email" id="donorEmailInput" placeholder="name@example.com" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                    <div class="flex items-center gap-2 pt-1">
+                        <input type="checkbox" id="donateAnonymousCheckbox" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+                        <label for="donateAnonymousCheckbox" class="text-xs text-slate-600 font-medium cursor-pointer">
+                            Make this donation anonymous on public supporter feeds
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="btnPayRazorpay" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-2xl shadow-xl shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-lock text-xs"></i>
+                    <span>Pay with Razorpay</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. SUCCESS / RECEIPT MODAL -->
+    <div id="receiptModal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border border-slate-100 animate-in zoom-in-95">
+            <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mx-auto mb-4 glow-emerald">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <span class="text-xs uppercase font-bold tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">Cryptographically Verified</span>
+            <h3 class="text-2xl font-black text-slate-900 mt-2">Thank You for Your Giving!</h3>
+            <p class="text-xs text-slate-500 mt-1">Your donation has been captured and applied to the campaign goal.</p>
+
+            <!-- Receipt Card -->
+            <div class="mt-6 bg-slate-50 rounded-2xl p-4 text-left border border-slate-100 space-y-2 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Amount Contributed</span>
+                    <span class="font-bold text-slate-900 text-sm" id="receiptAmount">₹500.00</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Campaign</span>
+                    <span class="font-semibold text-slate-800 truncate max-w-[180px]" id="receiptCampaign">Emergency Relief</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Razorpay Payment ID</span>
+                    <span class="font-mono text-slate-700 truncate max-w-[180px]" id="receiptPaymentId">pay_mock123</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Order ID</span>
+                    <span class="font-mono text-slate-700 truncate max-w-[180px]" id="receiptOrderId">order_mock123</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Timestamp</span>
+                    <span class="text-slate-700" id="receiptTimestamp">Oct 18, 2026</span>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-col gap-2">
+                <button onclick="downloadDonationReceipt()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download text-xs"></i>
+                    <span>Download Receipt (TXT)</span>
+                </button>
+                <button onclick="closeReceiptModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-sm transition">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. CREATE CAMPAIGN MODAL -->
+    <div id="createCampaignModal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 animate-in zoom-in-95">
+            <div class="p-6 bg-slate-900 text-white relative">
+                <button onclick="closeCreateCampaignModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white text-xl focus:outline-none">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <h3 class="text-xl font-black">Launch a Fundraiser</h3>
+                <p class="text-xs text-slate-400 mt-1">Start raising funds for your humanitarian or community cause.</p>
+            </div>
+
+            <form id="createCampaignForm" onsubmit="handleCreateCampaign(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Campaign Title</label>
+                    <input type="text" id="campTitleInput" placeholder="e.g. Clean Drinking Water for Primary School" minlength="5" maxlength="200" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Target Funding Goal (INR ₹)</label>
+                    <input type="number" id="campTargetInput" min="100" step="100" placeholder="e.g. 50000" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Story & Description</label>
+                    <textarea id="campDescInput" rows="4" minlength="20" placeholder="Explain the cause, who will benefit, and how funds will be deployed..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" required></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-3">
+                    <button type="button" onclick="closeCreateCampaignModal()" class="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                    <button type="submit" id="btnSubmitCampaign" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm shadow-md shadow-emerald-600/20 transition">
+                        Publish Campaign
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. AUTH MODAL (LOGIN & REGISTER) -->
+    <div id="authModal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 animate-in zoom-in-95">
+            <div class="flex border-b border-slate-100">
+                <button type="button" id="tabBtnLogin" onclick="switchAuthTab('login')" class="flex-1 py-4 text-center font-bold text-sm text-emerald-600 border-b-2 border-emerald-600">
+                    Sign In
+                </button>
+                <button type="button" id="tabBtnRegister" onclick="switchAuthTab('register')" class="flex-1 py-4 text-center font-bold text-sm text-slate-400 hover:text-slate-600 border-b-2 border-transparent">
+                    Create Account
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="handleLogin(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Email Address</label>
+                    <input type="email" id="loginEmail" placeholder="your@email.com" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm shadow-md transition">
+                    Sign In
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" onsubmit="handleRegister(event)" class="p-6 space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Full Name</label>
+                    <input type="text" id="regName" placeholder="Alex Morgan" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Email Address</label>
+                    <input type="email" id="regEmail" placeholder="your@email.com" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Password (min 6 chars)</label>
+                    <input type="password" id="regPassword" minlength="6" placeholder="••••••••" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Account Role</label>
+                    <select id="regRole" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="ROLE_USER">Supporter / Donor</option>
+                        <option value="ROLE_CAMPAIGN_OWNER">Campaign Creator</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm shadow-md transition">
+                    Create Account
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. API SETTINGS MODAL -->
+    <div id="apiSettingsModal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-100 animate-in zoom-in-95">
+            <h3 class="text-lg font-black text-slate-900">Backend API Target</h3>
+            <p class="text-xs text-slate-500 mt-1">Configure where frontend requests are routed (e.g. Render, Railway, or Localhost).</p>
+            <div class="mt-4 space-y-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">API Base URL</label>
+                    <input type="url" id="apiEndpointInput" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="mockModeCheckbox" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
+                    <label for="mockModeCheckbox" class="text-xs text-slate-600 font-medium">
+                        Force Mock Mode (Offline Testing)
+                    </label>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-2">
+                <button onclick="toggleApiSettingsModal()" class="px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button onclick="saveApiSettings()" class="bg-emerald-600 text-white px-5 py-2 text-sm font-bold rounded-xl hover:bg-emerald-700">Save & Reload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- Application Logic Script -->
+    <script src="app.js"></script>
+</body>
+</html>
