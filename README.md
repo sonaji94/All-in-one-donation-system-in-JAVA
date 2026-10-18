@@ -70,3 +70,5 @@ docker run -p 8080:8080 \
 
 ### 3. Testing with Frontend Checkout Harness
 Open `test-checkout.html` in your browser (via VS Code Live Server or static file), enter your active Campaign UUID, and test the full live Razorpay checkout lifecycle.
+
+# All-in-one-donation-system-in-JAVA
