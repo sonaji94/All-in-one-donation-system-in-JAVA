@@ -268,6 +268,7 @@ async function handleProceedDonation(e) {
     const amount = parseFloat(document.getElementById('donationAmountInput').value);
     const donorName = document.getElementById('donorNameInput').value.trim();
     const donorEmail = document.getElementById('donorEmailInput').value.trim();
+    const donorPan = document.getElementById('donorPanInput') ? document.getElementById('donorPanInput').value.trim().toUpperCase() : null;
     const isAnonymous = document.getElementById('donateAnonymousCheckbox').checked;
 
     if (!amount || amount <= 0) {
@@ -295,6 +296,7 @@ async function handleProceedDonation(e) {
             amount,
             donorName,
             donorEmail,
+            donorPan: donorPan || null,
             isAnonymous
         };
 

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Donation Receipt & 80G Tax Exemption Certificate</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }
+        .header { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
+        .content { padding: 32px 24px; }
+        .receipt-box { background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; margin: 24px 0; }
+        .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+        .label { color: #64748b; font-weight: 500; }
+        .val { color: #0f172a; font-weight: 700; text-align: right; }
+        .footer { padding: 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; }
+        .badge { background: #ecfdf5; color: #059669; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <span class="badge" style="background: rgba(255,255,255,0.2); color: #ffffff;">80G Tax Exemption Certificate Attached</span>
+            <h1 style="margin: 12px 0 0 0; font-size: 24px; font-weight: 800;">Thank You for Your Generosity!</h1>
+            <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.9;" th:text="'Receipt #' + ${receiptNumber}">Receipt #REC-20261018-0001</p>
+        </div>
+        <div class="content">
+            <p style="font-size: 16px; margin: 0 0 16px 0;">Dear <strong th:text="${donorName}">Donor</strong>,</p>
+            <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
+                We gratefully acknowledge receipt of your generous contribution to <strong th:text="${campaignTitle}">Community Cause</strong>. Your support directly advances emergency relief and empowerment programs.
+            </p>
+
+            <div class="receipt-box">
+                <div class="row">
+                    <span class="label">Amount Contributed</span>
+                    <span class="val" style="color: #059669; font-size: 18px;" th:text="'₹' + ${amount}">₹500.00</span>
+                </div>
+                <div class="row">
+                    <span class="label">Receipt Number</span>
+                    <span class="val" th:text="${receiptNumber}">REC-20261018-0001</span>
+                </div>
+                <div class="row">
+                    <span class="label">Payment ID</span>
+                    <span class="val" th:text="${paymentId}">pay_xyz123</span>
+                </div>
+                <div class="row">
+                    <span class="label">Date & Time</span>
+                    <span class="val" th:text="${date}">18-Oct-2026</span>
+                </div>
+                <div class="row" th:if="${donorPan != null and donorPan != ''}">
+                    <span class="label">Donor PAN</span>
+                    <span class="val" th:text="${donorPan}">ABCDE1234F</span>
+                </div>
+            </div>
+
+            <p style="font-size: 13px; color: #64748b; line-height: 1.5;">
+                <strong>80G Tax Benefit:</strong> Your official Section 80G Tax Exemption Certificate has been attached to this email as a PDF document for your tax filing records.
+            </p>
+        </div>
+        <div class="footer">
+            <p style="margin: 0;" th:text="${orgName}">ImpactFund Humanitarian Foundation</p>
+            <p style="margin: 4px 0 0 0;">This is an automated transactional confirmation. Please retain the attached PDF receipt for Income Tax filing.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -29,6 +29,8 @@ public class CreateOrderRequest {
     @Email(message = "Invalid email format")
     private String donorEmail;
 
+    private String donorPan;
+
     @Builder.Default
     private Boolean isAnonymous = false;
 }
