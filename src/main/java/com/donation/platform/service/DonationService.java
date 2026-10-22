@@ -18,6 +18,8 @@ import com.razorpay.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
+import com.donation.platform.event.DonationCompletedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -39,6 +41,7 @@ public class DonationService {
     private final RazorpayConfig razorpayConfig;
     private final CampaignRepository campaignRepository;
     private final DonationRepository donationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Creates an order via Razorpay API, records initial INITIATED state in DB,
@@ -99,6 +102,7 @@ public class DonationService {
                 .donor(donor)
                 .donorName(donorName)
                 .donorEmail(donorEmail)
+                .donorPan(request.getDonorPan() != null && !request.getDonorPan().isBlank() ? request.getDonorPan().toUpperCase().trim() : null)
                 .amount(request.getAmount())
                 .currency("INR")
                 .razorpayOrderId(razorpayOrderId)
@@ -191,7 +195,76 @@ public class DonationService {
         log.info("Payment verified and captured successfully for donation ID: {}. Campaign new total: {}",
                 donation.getId(), newCollected);
 
+        // Emit AFTER_COMMIT event for 80G receipt generation and email dispatch
+        eventPublisher.publishEvent(new DonationCompletedEvent(this, donation));
+
         return DonationResponse.fromEntity(donation);
+    }
+
+    /**
+     * Fallback reconciliation executed by Razorpay Webhook (payment.captured event).
+     * Guarantees that if a donor closes their browser before frontend verification executes,
+     * the donation is transitioned to SUCCESS, campaign funds are updated, and 80G receipt is dispatched.
+     * Fully idempotent: If already SUCCESS, skips duplicate funding increment.
+     */
+    @Retryable(
+            retryFor = {ObjectOptimisticLockingFailureException.class},
+            maxAttempts = 5,
+            backoff = @Backoff(delay = 100, multiplier = 2)
+    )
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public DonationResponse reconcilePaymentCaptured(String razorpayOrderId, String razorpayPaymentId, String razorpaySignature) {
+        log.info("Executing webhook reconciliation for Razorpay Order ID: {}, Payment ID: {}", razorpayOrderId, razorpayPaymentId);
+
+        Donation donation = donationRepository.findByRazorpayOrderId(razorpayOrderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Donation record not found for Order ID: " + razorpayOrderId));
+
+        if (donation.getStatus() == PaymentStatus.SUCCESS) {
+            log.info("Donation {} already captured and reconciled. Idempotent webhook skip.", razorpayOrderId);
+            return DonationResponse.fromEntity(donation);
+        }
+
+        donation.setStatus(PaymentStatus.SUCCESS);
+        donation.setRazorpayPaymentId(razorpayPaymentId);
+        if (razorpaySignature != null) {
+            donation.setRazorpaySignature(razorpaySignature);
+        }
+        donationRepository.save(donation);
+
+        // Atomically update campaign with optimistic locking
+        Campaign campaign = campaignRepository.findById(donation.getCampaign().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + donation.getCampaign().getId()));
+
+        BigDecimal newCollected = campaign.getCollectedAmount().add(donation.getAmount());
+        campaign.setCollectedAmount(newCollected);
+
+        if (campaign.getTargetAmount() != null && newCollected.compareTo(campaign.getTargetAmount()) >= 0) {
+            campaign.setStatus(CampaignStatus.COMPLETED);
+        }
+        campaignRepository.save(campaign);
+
+        log.info("Webhook successfully reconciled donation {}. Emitting DonationCompletedEvent.", donation.getId());
+        eventPublisher.publishEvent(new DonationCompletedEvent(this, donation));
+
+        return DonationResponse.fromEntity(donation);
+    }
+
+    /**
+     * Webhook reconciliation for failed payments (payment.failed event).
+     */
+    @Transactional
+    public void reconcilePaymentFailed(String razorpayOrderId, String razorpayPaymentId, String errorDescription) {
+        log.warn("Reconciling payment failure for Order ID: {}, Payment ID: {}. Reason: {}", 
+                razorpayOrderId, razorpayPaymentId, errorDescription);
+
+        donationRepository.findByRazorpayOrderId(razorpayOrderId).ifPresent(donation -> {
+            if (donation.getStatus() != PaymentStatus.SUCCESS) {
+                donation.setStatus(PaymentStatus.FAILED);
+                donation.setRazorpayPaymentId(razorpayPaymentId);
+                donationRepository.save(donation);
+                log.info("Updated donation {} status to FAILED via webhook reconciliation", donation.getId());
+            }
+        });
     }
 
     @Transactional(readOnly = true)
