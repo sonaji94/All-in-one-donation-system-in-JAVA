@@ -53,6 +53,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/donations/verify").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/donations/**").permitAll()
 
+                        // Public Webhook listener (protected via HMAC-SHA256 signature)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()
+
+                        // Public Receipt download & verification
+                        .requestMatchers(HttpMethod.GET, "/api/v1/receipts/**").permitAll()
+
                         // Public Campaign discovery & details
                         .requestMatchers(HttpMethod.GET, "/api/v1/campaigns/**").permitAll()
 
