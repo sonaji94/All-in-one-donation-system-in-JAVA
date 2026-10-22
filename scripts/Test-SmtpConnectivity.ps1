@@ -1,11 +1,7 @@
 # ==============================================================================
-# Test-SmtpConnectivity.ps1 — Windows/PowerShell SMTP Connectivity Verifier
+# Test-SmtpConnectivity.ps1 - Windows/PowerShell SMTP Connectivity Verifier
 # Platform: All-in-One Donation & Crowdfunding Platform
 # Author:   SRE Certification Suite v1.0
-#
-# Usage (run in PowerShell):
-#   .\scripts\Test-SmtpConnectivity.ps1
-#   .\scripts\Test-SmtpConnectivity.ps1 -SmtpHost "smtp.gmail.com" -SmtpPort 587 -FromEmail "you@gmail.com" -AppPassword "xxxx xxxx xxxx xxxx" -ToEmail "test@example.com"
 # ==============================================================================
 
 param(
@@ -13,7 +9,7 @@ param(
     [int]   $SmtpPort     = 587,
     [string]$FromEmail    = $env:SPRING_MAIL_USERNAME,
     [string]$AppPassword  = $env:SPRING_MAIL_PASSWORD,
-    [string]$ToEmail      = $env:SPRING_MAIL_USERNAME   # Send test to self
+    [string]$ToEmail      = $env:SPRING_MAIL_USERNAME
 )
 
 $PASS = 0
@@ -25,21 +21,21 @@ function Write-Info($msg) { Write-Host "[INFO] $msg" -ForegroundColor Cyan }
 function Write-Warn($msg) { Write-Host "[WARN] $msg" -ForegroundColor Yellow }
 
 Write-Host ""
-Write-Host "══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "  SMTP CONNECTIVITY & AUTHENTICATION TEST" -ForegroundColor Cyan
-Write-Host "══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # STEP 1: TCP Port Reachability
-# ─────────────────────────────────────────────────────────────
-Write-Host "━━━ STEP 1: TCP Port Reachability ━━━" -ForegroundColor Cyan
+# -------------------------------------------------------------
+Write-Host "--- STEP 1: TCP Port Reachability ---" -ForegroundColor Cyan
 Write-Info "Testing TCP to ${SmtpHost}:${SmtpPort} ..."
 
 try {
     $tcpClient = New-Object System.Net.Sockets.TcpClient
     $connectTask = $tcpClient.ConnectAsync($SmtpHost, $SmtpPort)
-    $connected = $connectTask.Wait(5000)  # 5 second timeout
+    $connected = $connectTask.Wait(5000)
 
     if ($connected -and $tcpClient.Connected) {
         Write-Pass "TCP connection to ${SmtpHost}:${SmtpPort} succeeded"
@@ -52,11 +48,11 @@ try {
     Write-Fail "TCP connection FAILED: $_"
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # STEP 2: Validate Credentials Are Set
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 Write-Host ""
-Write-Host "━━━ STEP 2: Credential Validation ━━━" -ForegroundColor Cyan
+Write-Host "--- STEP 2: Credential Validation ---" -ForegroundColor Cyan
 
 if ([string]::IsNullOrWhiteSpace($FromEmail)) {
     Write-Fail "FromEmail / SPRING_MAIL_USERNAME is empty. Set the parameter or environment variable."
@@ -68,18 +64,19 @@ if ([string]::IsNullOrWhiteSpace($AppPassword)) {
     Write-Fail "AppPassword / SPRING_MAIL_PASSWORD is empty. Generate a Gmail App Password."
     Write-Warn "Go to: https://myaccount.google.com/apppasswords"
 } else {
-    $masked = $AppPassword.Substring(0, [Math]::Min(3, $AppPassword.Length)) + "..." + $AppPassword.Substring([Math]::Max(0, $AppPassword.Length - 3))
+    $maskedLen = [Math]::Min(3, $AppPassword.Length)
+    $masked = $AppPassword.Substring(0, $maskedLen) + "...***"
     Write-Pass "SPRING_MAIL_PASSWORD is set: $masked"
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # STEP 3: Send Test Email via .NET SmtpClient with STARTTLS
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 Write-Host ""
-Write-Host "━━━ STEP 3: Send Test Email via STARTTLS ━━━" -ForegroundColor Cyan
+Write-Host "--- STEP 3: Send Test Email via STARTTLS ---" -ForegroundColor Cyan
 
 if ([string]::IsNullOrWhiteSpace($FromEmail) -or [string]::IsNullOrWhiteSpace($AppPassword)) {
-    Write-Warn "Skipping email send test — credentials not set"
+    Write-Warn "Skipping email send test - credentials not set"
 } else {
     Write-Info "Sending test email from $FromEmail to $ToEmail via ${SmtpHost}:${SmtpPort} ..."
 
@@ -87,26 +84,22 @@ if ([string]::IsNullOrWhiteSpace($FromEmail) -or [string]::IsNullOrWhiteSpace($A
         $smtpClient = New-Object System.Net.Mail.SmtpClient($SmtpHost, $SmtpPort)
         $smtpClient.EnableSsl = $true
         $smtpClient.Credentials = New-Object System.Net.NetworkCredential($FromEmail, $AppPassword)
-        $smtpClient.Timeout = 15000  # 15 seconds
+        $smtpClient.Timeout = 15000
 
         $mailMessage = New-Object System.Net.Mail.MailMessage
         $mailMessage.From = New-Object System.Net.Mail.MailAddress($FromEmail, "Donation Platform SRE")
         $mailMessage.To.Add($ToEmail)
-        $mailMessage.Subject = "[SRE TEST] SMTP Connectivity Verification — $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-        $mailMessage.Body = @"
-This is an automated SMTP connectivity test from the All-in-One Donation Platform SRE certification suite.
-
-Test Details:
-  SMTP Host:    $SmtpHost
-  SMTP Port:    $SmtpPort
-  From:         $FromEmail
-  Timestamp:    $(Get-Date -Format 'o')
-
-If you received this email, the SMTP configuration is working correctly.
-The platform is ready for 80G tax receipt email dispatch.
-
--- SRE Certification Suite
-"@
+        $dateStr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $mailMessage.Subject = "[SRE TEST] SMTP Connectivity Verification - $dateStr"
+        $mailMessage.Body = "This is an automated SMTP connectivity test from the All-in-One Donation Platform SRE certification suite.`n`n" +
+            "Test Details:`n" +
+            "  SMTP Host: $SmtpHost`n" +
+            "  SMTP Port: $SmtpPort`n" +
+            "  From:      $FromEmail`n" +
+            "  Timestamp: $dateStr`n`n" +
+            "If you received this email, the SMTP configuration is working correctly.`n" +
+            "The platform is ready for 80G tax receipt email dispatch.`n`n" +
+            "-- SRE Certification Suite"
         $mailMessage.IsBodyHtml = $false
 
         $smtpClient.Send($mailMessage)
@@ -115,8 +108,8 @@ The platform is ready for 80G tax receipt email dispatch.
         $smtpClient.Dispose()
         $mailMessage.Dispose()
 
-    } catch [System.Net.Mail.SmtpException] {
-        Write-Fail "SmtpException: $($_.Exception.Message)"
+    } catch {
+        Write-Fail "SMTP Error: $($_.Exception.Message)"
         if ($_.Exception.Message -match "5\.7\.8|credentials|Authentication") {
             Write-Warn "Authentication failed. For Gmail:"
             Write-Warn "  1. Enable 2-Step Verification at https://myaccount.google.com/security"
@@ -126,18 +119,16 @@ The platform is ready for 80G tax receipt email dispatch.
         } elseif ($_.Exception.Message -match "timeout|timed out") {
             Write-Warn "Connection timed out. Try port 465 with SSL instead of 587 with STARTTLS."
         }
-    } catch {
-        Write-Fail "Unexpected error: $($_.Exception.Message)"
     }
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # STEP 4: Environment Variable Summary for Render
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 Write-Host ""
-Write-Host "━━━ STEP 4: Render Environment Variable Reference ━━━" -ForegroundColor Cyan
+Write-Host "--- STEP 4: Render Environment Variable Reference ---" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  Copy these exact key names to Render Dashboard → Environment tab:" -ForegroundColor White
+Write-Host "  Copy these exact key names to Render Dashboard -> Environment tab:" -ForegroundColor White
 Write-Host ""
 
 $renderEnvVars = @(
@@ -167,23 +158,23 @@ foreach ($envVar in $renderEnvVars) {
 
 Write-Host ""
 Write-Host "  IMPORTANT: Set HIBERNATE_DDL_AUTO=validate in production!" -ForegroundColor Red
-Write-Host "  This prevents Hibernate from auto-altering schema — Flyway owns migrations." -ForegroundColor Red
+Write-Host "  This prevents Hibernate from auto-altering schema - Flyway owns migrations." -ForegroundColor Red
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # SUMMARY
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 Write-Host ""
-Write-Host "══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "  AUDIT SUMMARY" -ForegroundColor Cyan
-Write-Host "══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  PASSED:  $PASS" -ForegroundColor Green
 Write-Host "  FAILED:  $FAIL" -ForegroundColor Red
 Write-Host ""
 
 if ($FAIL -eq 0) {
-    Write-Host "  ✅  SMTP CONFIGURATION VERIFIED — Ready for production email dispatch." -ForegroundColor Green
+    Write-Host "  [OK] SMTP CONFIGURATION VERIFIED - Ready for production email dispatch." -ForegroundColor Green
 } else {
-    Write-Host "  ❌  CONFIGURATION ISSUES FOUND — Fix $FAIL item(s) before going live." -ForegroundColor Red
+    Write-Host "  [!] CONFIGURATION ISSUES FOUND - Fix $FAIL item(s) before going live." -ForegroundColor Red
 }
 Write-Host ""
