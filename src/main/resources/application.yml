@@ -43,6 +43,22 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:donations@impactfund.org}
+    password: ${SPRING_MAIL_PASSWORD:mock_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 # Application Security and Payment Gateway Credentials
 app:
   jwt:
@@ -53,7 +69,14 @@ app:
   razorpay:
     key-id: ${RAZORPAY_KEY_ID:rzp_test_YourTestKeyIdHere}
     key-secret: ${RAZORPAY_KEY_SECRET:YourTestKeySecretHere}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:YourWebhookSecretKeyHere}
     currency: INR
+  organization:
+    name: ${ORG_NAME:ImpactFund Humanitarian Foundation}
+    registration-number: ${ORG_REG_NO:NGO-MH-2023-889971}
+    pan: ${ORG_PAN:AAATI9981K}
+    section80g-number: ${ORG_80G_CERT:CIT(E)/80G/2023-24/A/10042}
+    address: ${ORG_ADDRESS:Level 5, Impact Towers, BKC, Mumbai - 400051, Maharashtra, India}
 
 management:
   endpoints:
