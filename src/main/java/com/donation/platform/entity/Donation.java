@@ -41,6 +41,9 @@ public class Donation {
     @Column(name = "donor_email")
     private String donorEmail;
 
+    @Column(name = "donor_pan", length = 20)
+    private String donorPan;
+
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
